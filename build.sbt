@@ -4,13 +4,18 @@ name := "demo_data"
 
 version := "0.0.1"
 
-// use sbt-dev-settings to configure
+// scala & java compilation & runtime settings
 
-import com.nitro.build._
 
-import PublishHelpers._
+//                         :::   NOTE   :::
+// Unfortunately...
+// As of right now (2015/August/18 11:45PM PST), Flink doesn't cross compile to 2.11.
+// There's support in master to do this, but they haven't pushed to maven central.
+// Update to 2.11 ASAP! (JIRA ticket: https://issues.apache.org/jira/browse/FLINK-1760 ).
 
-// scala & java
+scalaVersion := "2.10.5"
+
+crossScalaVersions := Seq(scalaVersion.value)
 
 //                         :::   NOTE   :::
 // we want to update to JVM 8 ASAP !
@@ -19,16 +24,31 @@ import PublishHelpers._
 // once this gets resolved, we'll update: 
 // [JIRA Issue]     https://issues.apache.org/jira/browse/SPARK-6152
 
-lazy val devConfig = {
-  import CompileScalaJava._
-  import Config._
-  import ScalaConfig._
-  overrideAllCompileOptionsToSimple(ensureJvm7().copy(scala = ensure210x()))
-}
+lazy val jvmVer = "1.7"
 
-CompileScalaJava.librarySettings(devConfig)
+scalacOptions := Seq(
+  "-optimize",
+  "-Xfatal-warnings",
+  "-feature",
+  s"-target:jvm-$jvmVer",
+  "-deprecation",
+  "-encoding", "utf8",
+  "-language:implicitConversions",
+  "-language:existentials",
+  "-language:higherKinds"
+)
 
-javaOptions := JvmRuntime.settings(devConfig.jvmVer)
+javacOptions := Seq(
+ "-source", jvmVer,
+ "-target", jvmVer
+)
+
+javaOptions := Seq(
+ "-server",
+ "-XX:+AggressiveOpts",
+ "-XX:+UseG1GC",
+ "-XX:+TieredCompilation"
+)
 
 // dependencies and their resolvers
 
@@ -54,18 +74,6 @@ libraryDependencies ++= Seq(
   "org.spire-math" %% "algebra" % "0.3.1",
   // Testing
   "org.scalatest" %% "scalatest" % "2.2.4" % Test
-)
-
-// publishing settings
-
-Publish.settings(
-  repo = Repository.github("malcolmgreaves", name.toString),
-  developers =
-    Seq(
-      Dev("mgreaves", "Malcolm Greaves")
-    ),
-  art = ArtifactInfo.sonatype,
-  lic = License.apache20
 )
 
 // unit test configuration
