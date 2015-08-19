@@ -207,10 +207,10 @@ class TravDataTest extends FunSuite {
     assert(foo(data) == Seq((1, 1), (2, 2), (3, 3)))
   }
 
-//  test("implicits to Traversable") {
-//    import t.Implicits._
-//    val ignore0: Traversable[Int] = seq2data(Seq(1))
-//    val ignore1: Traversable[Int] = array2Data(Array(1))
-//  }
+  //  test("implicits to Traversable") {
+  //    import t.Implicits._
+  //    val ignore0: Traversable[Int] = seq2data(Seq(1))
+  //    val ignore1: Traversable[Int] = array2Data(Array(1))
+  //  }
 
 }

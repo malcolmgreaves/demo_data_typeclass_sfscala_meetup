@@ -2,7 +2,7 @@ package fif
 
 import org.apache.spark.rdd.RDD
 
-import scala.language.{higherKinds, implicitConversions}
+import scala.language.{ higherKinds, implicitConversions }
 import scala.reflect.ClassTag
 import scala.util.Try
 
@@ -24,7 +24,7 @@ case object RddData extends Data[RDD] {
     }
 
   override def foreachPartition[A](d: RDD[A])(f: Iterable[A] => Any): Unit =
-    d.foreachPartition{partition =>
+    d.foreachPartition { partition =>
       val _ = f(partition.toIterable)
     }
 
