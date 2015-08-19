@@ -68,11 +68,9 @@ case object TravData extends Data[Traversable] {
 
   object Implicits {
 
-    implicit def seq2data[A](s: Seq[A]): Traversable[A] =
-      s.toTraversable
+    implicit val t: Data[Traversable] = TravData
 
-    implicit def array2Data[A](a: Array[A]): Traversable[A] =
-      Predef.genericArrayOps(a).toTraversable
+    implicit lazy val s: Data[Seq] = ???
 
   }
 
