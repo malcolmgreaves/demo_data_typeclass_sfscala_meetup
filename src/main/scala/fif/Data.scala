@@ -47,17 +47,11 @@ import simulacrum._
 
   def groupBy[A, B: ClassTag](d: D[A])(f: A => B): D[(B, Iterator[A])]
 
-  //  def as[A](d:D[A]): D[A] = d
-
   def reduce[A](d: D[A])(op: (A, A) => A): A
-
-  def toMap[A, T, U](d: D[A])(implicit ev: A <:< (T, U)): Map[T, U]
 
   def size[A](d: D[A]): Long
 
   def isEmpty[A](d: D[A]): Boolean
-
-  def sum[N: ClassTag: Numeric](d: D[N]): N
 
   def zip[A, B: ClassTag](d: D[A])(that: D[B]): D[(A, B)]
 

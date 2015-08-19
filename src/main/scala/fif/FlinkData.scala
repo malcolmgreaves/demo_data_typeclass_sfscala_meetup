@@ -117,47 +117,11 @@ case object FlinkData extends Data[DataSet] {
   override def reduce[A](d: DataSet[A])(op: (A, A) => A): A =
     d.reduce(op).collect().head
 
-  override def toMap[A, T, U](data: DataSet[A])(implicit ev: A <:< (T, U)): Map[T, U] = {
-
-    implicit val ti: TypeInformation[(T, U)] =
-      FlinkHelper.typeInfo(ClassTag(classOf[(T, U)]))
-
-    aggregate(data)(Map.empty[T, U])(
-      {
-        case (m, a) =>
-          val (t, u) = ev(a)
-          m + (t -> u)
-      },
-      {
-        case (m1, m2) =>
-          val (larger, smaller) =
-            if (m1.size > m2.size)
-              (m1, m2)
-            else
-              (m2, m1)
-
-          smaller.foldLeft(larger) {
-            case (m, (key, value)) =>
-              if (!m.contains(key))
-                m + (key -> value)
-              else
-                m
-          }
-      }
-    )
-  }
-
   override def size[A](d: DataSet[A]): Long =
     d.count()
 
   override def isEmpty[A](d: DataSet[A]): Boolean =
     size(d) == 0
-
-  override def sum[N: ClassTag: Numeric](d: DataSet[N]): N = {
-    val add = implicitly[Numeric[N]].plus _
-    implicit val ti = FlinkHelper.typeInfo[N]
-    aggregate(d)(implicitly[Numeric[N]].zero)(add, add)
-  }
 
   /**
    * Unimplemented!

@@ -54,17 +54,11 @@ case object TravData extends Data[Traversable] {
   override def reduce[A](d: Traversable[A])(op: (A, A) => A): A =
     d.reduce(op)
 
-  override def toMap[A, T, U](d: Traversable[A])(implicit ev: A <:< (T, U)): Map[T, U] =
-    d.toMap
-
   override def size[A](d: Traversable[A]): Long =
     d.size
 
   override def isEmpty[A](d: Traversable[A]): Boolean =
     d.isEmpty
-
-  override def sum[N: ClassTag: Numeric](d: Traversable[N]): N =
-    d.sum
 
   override def zip[A, B: ClassTag](d: Traversable[A])(that: Traversable[B]): Traversable[(A, B)] =
     d.toSeq.zip(that.toSeq)
