@@ -1,6 +1,6 @@
 organization := "io.malcolmgreaves"
 
-name := "abstract_data"
+name := "demo_data"
 
 version := "0.0.1"
 
@@ -21,7 +21,9 @@ import PublishHelpers._
 
 lazy val devConfig = {
   import CompileScalaJava._
-  Config.spark.copy(scala = Config.spark.scala.copy(isScala211 = true))
+  import Config._
+  import ScalaConfig._
+  overrideAllCompileOptionsToSimple(ensureJvm7().copy(scala = ensure210x()))
 }
 
 CompileScalaJava.librarySettings(devConfig)
