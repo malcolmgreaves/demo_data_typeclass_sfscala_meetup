@@ -172,7 +172,7 @@ class TravDataTest extends FunSuite {
       def h[D[_]: Data](data: D[Int]): Option[Int] =
         data.headOption
 
-    assert(h(dataintel) == Some(1))
+    assert(h(data) == Some(1))
     val empty = Traversable.empty[Int]
     assert(h(empty) == None)
   }

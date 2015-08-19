@@ -16,10 +16,10 @@ import scala.reflect.ClassTag
  */
 object FlinkHelper extends Serializable {
 
-  private[absnlp] val productClass: Class[Product] =
+  private[fif] val productClass: Class[Product] =
     classOf[Product]
 
-  private[absnlp] def countFields(c: Class[_]): Int = {
+  private[fif] def countFields(c: Class[_]): Int = {
 
     val fields = c.getFields
     if (fields.isEmpty)
@@ -49,10 +49,10 @@ object FlinkHelper extends Serializable {
     }
   }
 
-  private[absnlp] val emptyTypeInfoList: List[TypeInformation[_]] =
+  private[fif] val emptyTypeInfoList: List[TypeInformation[_]] =
     List.empty[TypeInformation[_]]
 
-  private[absnlp] val emptyUnitSeq: Seq[Unit] =
+  private[fif] val emptyUnitSeq: Seq[Unit] =
     Seq.empty[Unit]
 
   val unitTypeInformation: TypeInformation[Unit] =
