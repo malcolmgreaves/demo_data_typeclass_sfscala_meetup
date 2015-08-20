@@ -93,9 +93,19 @@ object TopWords {
       tf(word) * idf(word)
   }
 
-  def apply[D[_]: Data](data: D[Document], top: Int): Seq[String] = {
+  def apply[D[_]: Data](data: D[Document], top: Int, tfidf: Boolean = true): Seq[String] = {
 
-    val tfidf = termFrequencyInverseDocumentFrequency(data)
+    val scorer =
+      if(tfidf)
+        termFrequencyInverseDocumentFrequency(data)
+      else {
+        val wc = wordcount(data)
+        (word: String) =>
+          if(wc contains word)
+            wc(word).toDouble
+          else
+            0.0
+      }
 
     implicit val doubleCmpGreatest = new Cmp[(String, Double)] {
       override def compare(a: (String, Double), b: (String, Double)): Comparision =
@@ -116,7 +126,7 @@ object TopWords {
       data
         .flatMap(_._2)
         .map { word =>
-          (word, tfidf(word))
+          (word, scorer(word))
         }
         .aggregate(priorityQueueModule.empty)(
           {
