@@ -29,12 +29,8 @@ object TopWordsMain extends App {
 
   implicit val x = TravData
 
-  println("wordcount top 25 words")
-  TopWords(documents, 25, tfidf = false)
-    .foreach(println)
-  println("")
-
   println("TFIDF top 25 words")
+  println("==================")
   TopWords(documents, 25, tfidf = true)
     .foreach(println)
 
