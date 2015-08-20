@@ -19,10 +19,10 @@ class FlinkDataTest extends FunSuite {
   implicit val sg = TopWords.intSg
 
   lazy val data: DataSet[Int] =
-    ExecutionEnvironment.createLocalEnvironment(1).fromElements(1, 2, 3)
+    ExecutionEnvironment.createLocalEnvironment(2).fromElements(1, 2, 3)
 
   def empty[T: ClassTag: TypeInformation]: DataSet[T] =
-    ExecutionEnvironment.createLocalEnvironment(1).fromCollection(Seq.empty[T])
+    ExecutionEnvironment.createLocalEnvironment(2).fromCollection(Seq.empty[T])
 
   test("test map") {
 

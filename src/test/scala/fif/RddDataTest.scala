@@ -18,7 +18,8 @@ class RddDataTest extends FunSuite {
 
   implicit val sg = TopWords.intSg
 
-  private val sc = new SparkContext(new SparkConf().setAppName("test"))
+  private val sc =
+    new SparkContext(new SparkConf().setMaster("local[2]").setAppName("test"))
 
   lazy val data: RDD[Int] =
     sc.parallelize(Seq(1, 2, 3))
