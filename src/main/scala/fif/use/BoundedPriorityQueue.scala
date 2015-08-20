@@ -1,12 +1,12 @@
 package fif.use
 
-import algebra.{Eq, Semigroup}
+import algebra.{ Eq, Semigroup }
 import fif.Data
 
 import scala.language.higherKinds
 import scala.reflect.ClassTag
 
-abstract class BoundedPriorityQueue[A : Cmp] {
+abstract class BoundedPriorityQueue[A: Cmp] {
 
   type T
 
@@ -23,12 +23,18 @@ abstract class BoundedPriorityQueue[A : Cmp] {
   def insert(item: A)(existing: T): T
 }
 
-
 object BoundedPriorityQueue {
+
+  object Implicits {
+
+    implicit class Piper[A](val x: A) extends AnyVal {
+      def |>[B](f: A => B) = f(x)
+    }
+  }
 
   val doubleOrdering = math.Ordering.Double
 
-  def create[A : Cmp](boundedMaximumSize: Int): BoundedPriorityQueue[A] =
+  def create[A: Cmp](boundedMaximumSize: Int): BoundedPriorityQueue[A] =
     new BoundedPriorityQueue[A] {
 
       private val cmp = implicitly[Cmp[A]]
@@ -62,21 +68,58 @@ object BoundedPriorityQueue {
               existing
 
           case f @ Full(left, heapItem, right) =>
-            if(cmp.compare(item, heapItem) == Less) {
-              // item is "more minimum" than heap item:
-              // push heap-item down
-              if (right.size > left.size)
-                Full(insert_h(heapItem, left, size), item, right)
-              else
-                Full(left, item, insert_h(heapItem, right, size))
+            cmp.compare(item, heapItem) match {
 
-            } else {
-              // item is either "less minimum" or "the same priority" to the heap item:
-              // continue down heap to find appropriate spot
-              if (right.size > left.size)
-                Full(insert_h(item, left, size), heapItem, right)
-              else
-                Full(left, heapItem, insert_h(item, right, size))
+              case Less =>
+                // item is "more minimum" than heap item:
+                // push heap-item down
+                if (right.size > left.size)
+                  Full(insert_h(heapItem, left, size), item, right)
+                else
+                  Full(left, item, insert_h(heapItem, right, size))
+
+              case Greater | Equivalent =>
+                // item is either "less minimum" or "the same priority" to the heap item:
+                // continue down heap to find appropriate spot
+
+                peekMin(right) match {
+
+                  case Some(rightItem) =>
+
+                    peekMin(left) match {
+
+                      case Some(leftItem) =>
+
+                        cmp.compare(leftItem, rightItem) match {
+
+                          case Less =>
+                            // insert on right
+                            Full(left, heapItem, insert_h(item, right, size))
+
+                          case Greater =>
+                            // insert on left
+                            Full(insert_h(item, left, size), heapItem, right)
+
+                          case Equivalent =>
+                            if (right.size > left.size)
+                              Full(insert_h(item, left, size), heapItem, right)
+                            else
+                              Full(left, heapItem, insert_h(item, right, size))
+                        }
+
+                      case None =>
+                        // nothing on left
+                        // insert on left
+                        Full(insert_h(item, left, size), heapItem, right)
+
+                    }
+
+                  case None =>
+                    // nothing on right
+                    // insert on right
+                    Full(left, heapItem, insert_h(item, right, size))
+
+                }
             }
         }
 
@@ -123,24 +166,27 @@ object BoundedPriorityQueue {
               case Some(rightMin) =>
                 // left and right subtrees:
                 // compare to see which one we should pull-up
-                if (cmp.compare(leftMin, rightMin) == Less)
-                  // left is "more minmum than right":
-                  // promote left subtree
-                  Full(
-                    takeMin(left).map(_._2).getOrElse(Empty),
-                    leftMin,
-                    right
-                  )
+                cmp.compare(leftMin, rightMin) match {
 
-                else
-                  // right is "more minimum" or "equal priority" to left:
-                  // either case, promote right subtree
-                  // item is "more minimum" than heap item
-                  Full(
-                    left,
-                    rightMin,
-                    takeMin(right).map(_._2).getOrElse(Empty)
-                  )
+                  case Less =>
+                    // left is "more minmum than right":
+                    // promote left subtree
+                    Full(
+                      takeMin(left).map(_._2).getOrElse(Empty),
+                      leftMin,
+                      right
+                    )
+
+                  case Greater | Equivalent =>
+                    // right is "more minimum" or "equal priority" to left:
+                    // either case, promote right subtree
+                    // item is "more minimum" than heap item
+                    Full(
+                      left,
+                      rightMin,
+                      takeMin(right).map(_._2).getOrElse(Empty)
+                    )
+                }
             }
 
         }

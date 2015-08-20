@@ -1,5 +1,6 @@
 package fif
 
+import fif.use.{ Sum, ToMap, TopWords }
 import org.scalatest.FunSuite
 
 import scala.language.higherKinds
@@ -13,7 +14,7 @@ class TravDataTest extends FunSuite {
   // Datatypeclass evidence for all kinds of Traversables
   implicit val t = TravData
 
-  import t.Implicits._
+  implicit val sg = TopWords.intSg
 
   val data = Seq(1, 2, 3).toTraversable
 
@@ -155,10 +156,7 @@ class TravDataTest extends FunSuite {
   }
 
   test("sum") {
-      def s[D[_]: Data](data: D[Int]): Int =
-        data.sum
-
-    assert(s(data) == 6)
+    assert(Sum(data) == 6)
   }
 
   test("filter") {
@@ -187,10 +185,7 @@ class TravDataTest extends FunSuite {
   }
 
   test("toMap") {
-      def toM[D[_]: Data](data: D[Int]): Map[Int, Int] =
-        data.map(x => (x, x)).toMap
-
-    assert(toM(data) == Map(1 -> 1, 2 -> 2, 3 -> 3))
+    assert(ToMap(data.map(x => (x, x))) == Map(1 -> 1, 2 -> 2, 3 -> 3))
   }
 
   test("zipWithIndex") {

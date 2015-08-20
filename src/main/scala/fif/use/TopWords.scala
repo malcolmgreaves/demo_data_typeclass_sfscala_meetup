@@ -14,13 +14,19 @@ object TopWords {
 
   import DataOps.syntax._
 
-  private[this] val longSg: Semigroup[Long] =
+  val intSg: Semigroup[Int] =
+    new Semigroup[Int] {
+      override def combine(x: Int, y: Int): Int =
+        x + y
+    }
+
+  val longSg: Semigroup[Long] =
     new Semigroup[Long] {
       override def combine(x: Long, y: Long): Long =
         x + y
     }
 
-  private[this] val stringSetSg: Semigroup[Set[String]] =
+  val stringSetSg: Semigroup[Set[String]] =
     new Semigroup[Set[String]] {
       override def combine(x: Set[String], y: Set[String]): Set[String] =
         x ++ y

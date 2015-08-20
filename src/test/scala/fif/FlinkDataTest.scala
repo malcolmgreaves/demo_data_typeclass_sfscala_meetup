@@ -1,5 +1,6 @@
 package fif
 
+import fif.use.{ TopWords, Sum, ToMap }
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.scala._
 import org.scalatest.FunSuite
@@ -14,6 +15,8 @@ class FlinkDataTest extends FunSuite {
 
   // Data evidence for Flink DataSet
   implicit val t = FlinkData
+
+  implicit val sg = TopWords.intSg
 
   lazy val data: DataSet[Int] =
     ExecutionEnvironment.createLocalEnvironment(1).fromElements(1, 2, 3)
@@ -134,7 +137,7 @@ class FlinkDataTest extends FunSuite {
       def groupIt[D[_]: Data](data: D[Int]): D[(Boolean, Iterator[Int])] =
         data.groupBy { _ % 2 == 0 }
 
-    val evenGroup = groupIt(data).toMap
+    val evenGroup = groupIt(data).toSeq.toMap
 
     val evens = evenGroup(true).toSet
     assert(evens.size == 1)
@@ -164,13 +167,6 @@ class FlinkDataTest extends FunSuite {
     assert(result == 8)
   }
 
-  test("sum") {
-      def s[D[_]: Data](data: D[Int]): Int =
-        data.sum
-
-    assert(s(data) == 6)
-  }
-
   test("filter") {
       def f[D[_]: Data](data: D[Int]): D[Int] =
         data.filter(_ % 2 == 0)
@@ -194,13 +190,6 @@ class FlinkDataTest extends FunSuite {
     assert(e(empty[Int]))
   }
 
-  test("toMap") {
-      def toM[D[_]: Data](data: D[Int]): Map[Int, Int] =
-        data.map(x => (x, x)).toMap
-
-    assert(toM(data) == Map(1 -> 1, 2 -> 2, 3 -> 3))
-  }
-
   ignore("zipWithIndex") {
       def foo[D[_]: Data](data: D[Int]): Unit =
         assert(data.zipWithIndex == Seq((1, 0), (2, 1), (3, 2)))
@@ -213,6 +202,14 @@ class FlinkDataTest extends FunSuite {
         data.zip(data)
 
     assert(foo(data).collect() == Seq((1, 1), (2, 2), (3, 3)))
+  }
+
+  test("sum") {
+    assert(Sum(data) == 6)
+  }
+
+  test("toMap") {
+    assert(ToMap(data.map(x => (x, x))) == Map(1 -> 1, 2 -> 2, 3 -> 3))
   }
 
 }
