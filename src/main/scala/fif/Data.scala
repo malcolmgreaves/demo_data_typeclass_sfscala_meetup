@@ -10,7 +10,7 @@ import simulacrum._
  * The implementation of Data is suitable for both large-scale, distributed data
  * or in-memory structures.
  */
-@typeclass trait Data[D[_]] {
+@typeclass trait Data[D[_]] extends Serializable {
 
   /** Transform a dataset by applying f to each element. */
   def map[A, B: ClassTag](d: D[A])(f: A => B): D[B]
