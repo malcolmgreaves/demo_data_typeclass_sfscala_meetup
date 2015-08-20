@@ -3,6 +3,7 @@ package fif.use
 import algebra.Semigroup
 import fif.{ DataOps, Data }
 
+import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds
 import scala.reflect.ClassTag
 
@@ -96,14 +97,69 @@ object TopWords {
 
     val tfidf = termFrequencyInverseDocumentFrequency(data)
 
-    data
-      .flatMap(_._2)
-      .map { word =>
-        (word, tfidf(word))
-      }
-    //      .aggregate()
+    implicit val doubleCmpGreatest = new Cmp[(String, Double)] {
+      override def compare(a: (String, Double), b: (String, Double)): Comparision =
+        if (a._2 > b._2) // backwards for max-priority queue!
+          Less
+        else if (a._2 < b._2) // backwards for max-priority queue!
+          Greater
+        else
+          Equivalent
+    }
 
-    ???
+    val priorityQueueModule = BoundedPriorityQueue.create[(String, Double)](top)
+
+    implicit val ct: ClassTag[priorityQueueModule.T] =
+      ClassTag(priorityQueueModule.empty.getClass)
+
+    val finalPq =
+      data
+        .flatMap(_._2)
+        .map { word =>
+          (word, tfidf(word))
+        }
+        .aggregate(priorityQueueModule.empty)(
+          {
+            case (pq, wordAndScore) =>
+              priorityQueueModule.insert(wordAndScore)(pq)
+          },
+          {
+            case (pq1, pq2) =>
+              var draining = pq1
+              var updating = pq2
+              while (priorityQueueModule.peekMin(draining).isDefined) {
+
+                priorityQueueModule.takeMin(draining) match {
+                  case Some((minimum, newPq)) =>
+                    draining = newPq
+                    updating = priorityQueueModule.insert(minimum)(updating)
+
+                  case None =>
+                    ()
+                }
+              }
+
+              updating
+          }
+        )
+
+    {
+      val buffer = new ArrayBuffer[String]
+      var draining = finalPq
+      while (priorityQueueModule.peekMin(draining).isDefined) {
+
+        priorityQueueModule.takeMin(draining) match {
+          case Some(((word, _), newPq)) =>
+            draining = newPq
+            buffer.append(word)
+
+          case None =>
+            ()
+        }
+      }
+      buffer.toSeq
+    }
   }
+
 
 }
