@@ -99,8 +99,9 @@ object TopWords {
     data
       .flatMap(_._2)
       .map { word =>
-
+        (word, tfidf(word))
       }
+    //      .aggregate()
 
     ???
   }
