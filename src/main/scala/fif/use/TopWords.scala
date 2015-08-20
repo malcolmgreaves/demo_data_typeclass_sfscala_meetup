@@ -79,7 +79,7 @@ object TopWords {
 
     (word: String) =>
       if (idf contains word)
-        math.log(totalDocuments / idf(word))
+        totalDocuments / idf(word)
       else
         0.0
   }
