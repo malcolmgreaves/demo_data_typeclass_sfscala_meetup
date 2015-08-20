@@ -3,18 +3,16 @@ package fif.use
 import java.io.File
 
 import algebra.Semigroup
-import fif.Data
+import fif.{ TravData, Data }
 
-import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 import scala.language.higherKinds
-import scala.reflect.ClassTag
 
 object TopWordsMain extends App {
 
   val dir = new File("./src/test/resources/")
 
-  val documents: Seq[TopWords.Document] =
+  val documents: Traversable[TopWords.Document] =
     dir
       .listFiles().toSeq
       .zipWithIndex
@@ -29,5 +27,10 @@ object TopWordsMain extends App {
           (index.toLong, text)
       }
 
+  implicit val x = TravData
+
+  println("top 25 words")
+  TopWords(documents, 25)
+    .foreach(println)
 
 }
