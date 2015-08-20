@@ -1,5 +1,6 @@
 package fif.use
 
+import algebra.Semigroup
 import fif.{ Data, DataOps }
 
 import scala.language.higherKinds
@@ -15,6 +16,24 @@ object ToMap {
     else
       m + (key -> value)
 
+  def combine[K, V: Semigroup](m1: Map[K, V], m2: Map[K, V]): Map[K, V] = {
+    val (larger, smaller) =
+      if (m1.size > m2.size)
+        (m1, m2)
+      else
+        (m2, m1)
+
+    smaller.foldLeft(larger) {
+      case (m, (key, value)) =>
+        addToMap(m)(key, value)
+    }
+  }
+
+  def apply[T: ClassTag, U: ClassTag: Semigroup, D[_]: Data](data: D[(T, U)]): Map[T, U] = {
+    implicit val _ = identity[(T, U)] _
+    apply[(T, U), T, U, D](data)
+  }
+
   def apply[A, T: ClassTag, U: ClassTag: Semigroup, D[_]: Data](data: D[A])(implicit ev: A <:< (T, U)): Map[T, U] = {
 
     val sg = implicitly[Semigroup[U]]
@@ -25,19 +44,7 @@ object ToMap {
           val (t, u) = ev(a)
           addToMap(m)(t, u)
       },
-      {
-        case (m1, m2) =>
-          val (larger, smaller) =
-            if (m1.size > m2.size)
-              (m1, m2)
-            else
-              (m2, m1)
-
-          smaller.foldLeft(larger) {
-            case (m, (key, value)) =>
-              addToMap(m)(key, value)
-          }
-      }
+      combine
     )
   }
 }
