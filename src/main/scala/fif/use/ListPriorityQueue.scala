@@ -50,14 +50,11 @@ object ListPriorityQueue {
           (empty, None)
 
         else {
+          val (smaller, larger) =
+            if (one.size > two.size) (one, two)
+            else (two, one)
 
-          val merged = (one ++ two).sortWith(sortFn)
-          if (isMaxSizeDefined && merged.size > maxSizeIfDefined) {
-            val end = math.min(merged.size, maxSizeIfDefined)
-            (merged.slice(0, end), Some(merged.slice(end, merged.size)))
-
-          } else
-            (merged, None)
+          SortableContainer.insert(this)(larger, smaller.toIterable)
         }
 
       override def takeMin(existing: List[A]): Option[(A, Structure)] =
