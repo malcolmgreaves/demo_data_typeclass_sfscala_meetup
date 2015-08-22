@@ -6,7 +6,7 @@ import fif.{ Data, DataOps }
 import scala.language.higherKinds
 import scala.reflect.ClassTag
 
-object ToMap {
+object ToMap extends Serializable {
 
   import DataOps.syntax._
 

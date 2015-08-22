@@ -1,13 +1,13 @@
 package fif.use
 
-import algebra.Semigroup
+import algebra.{ Eq, Semigroup }
 import fif.{ DataOps, Data }
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds
 import scala.reflect.ClassTag
 
-object TopWords {
+case object TopWords {
 
   type Id = Long
   type Text = Traversable[String]
@@ -21,20 +21,21 @@ object TopWords {
         x + y
     }
 
-  val longSg: Semigroup[Long] =
-    new Semigroup[Long] {
-      override def combine(x: Long, y: Long): Long =
-        x + y
+  def numericSemigroup[N: Numeric]: Semigroup[N] =
+    new Semigroup[N] {
+      private val num = implicitly[Numeric[N]]
+      override def combine(x: N, y: N): N =
+        num.plus(x, y)
     }
 
-  val stringSetSg: Semigroup[Set[String]] =
-    new Semigroup[Set[String]] {
-      override def combine(x: Set[String], y: Set[String]): Set[String] =
+  def setSemigroup[A]: Semigroup[Set[A]] =
+    new Semigroup[Set[A]] {
+      override def combine(x: Set[A], y: Set[A]): Set[A] =
         x ++ y
     }
 
   def wordcount[D[_]: Data](data: D[Document]): Map[String, Long] = {
-    implicit val _ = longSg
+    implicit val _ = numericSemigroup[Long]
     ToMap {
       data.flatMap { doc =>
         doc._2.map { word => (word, 1l) }
@@ -46,7 +47,7 @@ object TopWords {
     val wc = wordcount(data)
 
     import fif.TravData.Implicits.t
-    val totalCounts = Sum(wc.values.toTraversable)
+    val totalCounts = Sum(wc.values.toTraversable).toDouble
 
     (word: String) =>
       if (wc contains word)
@@ -59,27 +60,27 @@ object TopWords {
 
     val totalDocuments = data.size.toDouble
 
-    val dc: Map[Id, Set[String]] = {
-      implicit val _ = stringSetSg
-      ToMap(data.map { doc => (doc._1, doc._2.toSet) })
+    val wordDocFreq = {
+
+      val dc: Map[Id, Set[String]] = {
+        implicit val _ = setSemigroup[String]
+        ToMap(data.map { doc => (doc._1, doc._2.toSet) })
+      }
+
+      implicit val _ = numericSemigroup[Double]
+      dc
+        .foldLeft(Map.empty[String, Double]) {
+          case (m, (docId, uniqWords)) =>
+            uniqWords.foldLeft(m) {
+              case (updating, word) =>
+                ToMap.addToMap(updating)(word, 1.0)
+            }
+        }
     }
 
-    implicit val _ = longSg
-    val idf =
-      dc.foldLeft(Map.empty[String, Long]) {
-        case (m, (docId, uniqWords)) =>
-          uniqWords.foldLeft(m) {
-            case (updating, word) =>
-              ToMap.addToMap(updating)(word, 1l)
-          }
-      }
-        .map {
-          case (k, v) => (k, v.toDouble)
-        }
-
     (word: String) =>
-      if (idf contains word)
-        totalDocuments / idf(word)
+      if (wordDocFreq contains word)
+        math.log(totalDocuments / wordDocFreq(word))
       else
         0.0
   }
@@ -96,30 +97,41 @@ object TopWords {
   def apply[D[_]: Data](data: D[Document], top: Int, tfidf: Boolean = true): Seq[String] = {
 
     val scorer =
-      if(tfidf)
+      if (tfidf)
         termFrequencyInverseDocumentFrequency(data)
+
       else {
         val wc = wordcount(data)
         (word: String) =>
-          if(wc contains word)
+          if (wc contains word)
             wc(word).toDouble
           else
             0.0
       }
 
-    implicit val doubleCmpGreatest = new Cmp[(String, Double)] {
-      override def compare(a: (String, Double), b: (String, Double)): Comparision =
-        if (a._2 > b._2) // backwards for max-priority queue!
-          Less
-        else if (a._2 < b._2) // backwards for max-priority queue!
-          Greater
-        else
-          Equivalent
+    val priorityQueueModule = {
+
+      implicit val doubleCmp: Cmp[(String, Double)] =
+        new Cmp[(String, Double)] {
+          override def compare(a: (String, Double), b: (String, Double)): Comparision =
+            if (a._2 > b._2) // backwards for max-priority queue!
+              Less
+            else if (a._2 < b._2) // backwards for max-priority queue!
+              Greater
+            else
+              Equivalent
+        }
+
+      implicit val stringEq: Eq[(String, Double)] =
+        Eq.instance[(String, Double)] {
+          case ((a, _), (b, _)) =>
+            a == b
+        }
+
+      ListPriorityQueue[(String, Double)](Some(top))
     }
 
-    val priorityQueueModule = BoundedPriorityQueue.create[(String, Double)](top)
-
-    implicit val ct: ClassTag[priorityQueueModule.T] =
+    implicit val ct: ClassTag[priorityQueueModule.Structure] =
       ClassTag(priorityQueueModule.empty.getClass)
 
     val finalPq =
@@ -131,25 +143,11 @@ object TopWords {
         .aggregate(priorityQueueModule.empty)(
           {
             case (pq, wordAndScore) =>
-              priorityQueueModule.insert(wordAndScore)(pq)
+              priorityQueueModule.insert(wordAndScore)(pq)._1
           },
           {
             case (pq1, pq2) =>
-              var draining = pq1
-              var updating = pq2
-              while (priorityQueueModule.peekMin(draining).isDefined) {
-
-                priorityQueueModule.takeMin(draining) match {
-                  case Some((minimum, newPq)) =>
-                    draining = newPq
-                    updating = priorityQueueModule.insert(minimum)(updating)
-
-                  case None =>
-                    ()
-                }
-              }
-
-              updating
+              priorityQueueModule.merge(pq1, pq2)._1
           }
         )
 

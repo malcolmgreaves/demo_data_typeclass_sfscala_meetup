@@ -5,7 +5,7 @@ import fif.{ Data, DataOps }
 import scala.language.higherKinds
 import scala.reflect.ClassTag
 
-object Sum {
+object Sum extends Serializable {
 
   import DataOps.syntax._
 

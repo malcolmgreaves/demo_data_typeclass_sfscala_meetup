@@ -79,7 +79,7 @@ import simulacrum._
  *  data.map(_ * 10).sum
  * ```
  */
-object DataOps {
+object DataOps extends Serializable {
 
   val syntax = Data.ops
 }
