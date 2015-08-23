@@ -4,7 +4,6 @@ import java.io.File
 
 import fif._
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.scala.ExecutionEnvironment
 import org.apache.spark.{ SparkConf, SparkContext }
 
 import scala.io.Source
@@ -55,12 +54,19 @@ object TopWordsMain extends App with Serializable {
     sc.stop()
   }
 
-  //  implicit val xxx: TypeInformation[(fif.use.TopWords.Id, fif.use.TopWords.Text)] =
-  //    FlinkHelper.typeInfo(ClassTag(classOf[(fif.use.TopWords.Id, fif.use.TopWords.Text)]))
-  //
-  //  val documentsFlink =
-  //    ExecutionEnvironment.createLocalEnvironment(2).fromCollection(documents.toArray)
-  //
+  import org.apache.flink.api.scala._
+
+  implicit val xxx: TypeInformation[(fif.use.TopWords.Id, fif.use.TopWords.Text)] =
+    FlinkHelper.typeInfo(ClassTag(classOf[(fif.use.TopWords.Id, fif.use.TopWords.Text)]))
+
+  val documentsFlink =
+    ExecutionEnvironment.createLocalEnvironment(2).fromCollection(documents.toArray)
+
+  implicit val f = FlinkData
+  import DataOps.syntax._
+  println("Flink")
+  documentsFlink.foreach(x => println(x._1))
+
   //  println("[Flink] TFIDF top 25 words")
   //  println("==================")
   //  implicit val r = FlinkData
