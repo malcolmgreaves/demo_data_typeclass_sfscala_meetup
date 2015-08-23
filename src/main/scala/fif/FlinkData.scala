@@ -22,24 +22,39 @@ case object FlinkData extends Data[DataSet] {
 
   override def mapParition[A, B: ClassTag](d: DataSet[A])(f: Iterable[A] => Iterable[B]): DataSet[B] = {
     implicit val ti = FlinkHelper.typeInfo[B]
+    // We must evaluate f on each element in data, map is a natural choice here.
+    // However, map is lazy for DataSet. So we force evaluation with a call to count().
     d.mapPartition { partition =>
       f(partition.toIterable)
     }
   }
 
-  override def foreach[A](d: DataSet[A])(f: A => Any): Unit = {
-    // ignore this map operation's return type
+  /* DESIGN DECISION #foreach_flink_implementation
+   *
+   * Note for the ** foreach ** and ** foreachPartition ** methods:
+   *
+   * We must evaluate f on each element in data, map is a natural choice here.
+   * However, map is lazy for DataSet. So we force evaluation with a call to count().
+   * We're not interested in the value from count, but want to evaluate to ().
+   * Convention: Assign ignored or otherwise unused values to "_".
+   *
+   */
+
+  override def foreach[A](data: DataSet[A])(f: A => Any): Unit = {
     implicit val ti = FlinkHelper.unitTypeInformation
-    d.mapPartition { partition =>
-      partition.foreach(f)
-      FlinkHelper.emptyUnitSeq
-    }
-    ()
+    // search for: #foreach_flink_implementation
+    val _ = data
+      .mapPartition { partition =>
+        partition.foreach(f)
+        FlinkHelper.emptyUnitSeq
+      }
+      .count()
   }
 
   override def foreachPartition[A](d: DataSet[A])(f: Iterable[A] => Any): Unit = {
     // ignore this map operation's return type
     implicit val ti = FlinkHelper.unitTypeInformation
+    // search for: #foreach_flink_implementation
     d.mapPartition { partition =>
       f(partition.toIterable)
       FlinkHelper.emptyUnitSeq
@@ -50,12 +65,21 @@ case object FlinkData extends Data[DataSet] {
   override def filter[A](d: DataSet[A])(f: A => Boolean): DataSet[A] =
     d.filter(f)
 
+  /**
+   *  Assumptions
+   *  - seqOp and compOp communicative and associative (respectively)
+   */
   override def aggregate[A, B: ClassTag](data: DataSet[A])(zero: B)(seqOp: (B, A) => B, combOp: (B, B) => B): B = {
     implicit val ti = FlinkHelper.typeInfo[B]
     data
       .mapPartition { partition =>
         Seq(partition.foldLeft(zero)(seqOp))
       }
+      // Flink's reduce evaluates to a DataSet[B], which is......very odd.
+      // It's not the correct return type: B.
+      // So we collect() to get a local Scala collection then call the correct
+      // reduce. This still evaluates to the correct result iff seqOp and combOp
+      // are communicative and associative.
       .reduce(combOp)
       .collect()
       .reduce(combOp)
@@ -67,7 +91,7 @@ case object FlinkData extends Data[DataSet] {
    * Flink doesn't support an API for total sorting. Must determine a correct
    * implementation using the lower-level API.
    */
-  override def sortBy[A, B: ClassTag](d: DataSet[A])(f: (A) ⇒ B)(implicit ord: math.Ordering[B]): DataSet[A] =
+  override def sortBy[A, B: ClassTag](data: DataSet[A])(f: (A) ⇒ B)(implicit ord: math.Ordering[B]): DataSet[A] =
     ???
 
   override def take[A](d: DataSet[A])(k: Int): Traversable[A] =
